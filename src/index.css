@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* Poppins — the typeface specified in the Recykal Brand Guidelines.
+   Weights map to the guideline's Light / Regular / Medium / Semi Bold / Bold. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: 'Poppins', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* ---- Recykal brand palette (Brand Guidelines, "Primary Colour Palette") ----
+     The eight official brand colours, kept under their guideline names so it's
+     obvious which is which when picking one. */
+  --color-recykal-bright-blue: #005DFF;
+  --color-recykal-midnight-blue: #024C8A;
+  --color-recykal-purple: #8460D4;
+  --color-recykal-blue: #567DE8;
+  --color-recykal-bright-green: #1DC797;
+  --color-recykal-dark-green: #049769;
+  --color-recykal-duke-blue: #0000AF;
+  --color-recykal-fern-green: #3E7D44;
+
+  /* Lightened tints of the darker brand hues. Several brand colours (Midnight
+     Blue, Duke Blue, Fern Green) are too dark to read as text on a slate-900
+     surface, so dark mode uses these instead of falling back off-brand. */
+  --color-recykal-bright-blue-light: #6FA0FF;
+  --color-recykal-midnight-blue-light: #5B9BD5;
+  --color-recykal-purple-light: #B79DE8;
+  --color-recykal-fern-green-light: #86C08E;
+
+  /* Primary action colour scale, anchored on the two official greens:
+     brand-400 is Bright Green #1DC797 and brand-600 is Dark Green #049769.
+     The remaining steps are tints/shades of those so hover, ring and subtle
+     background states stay on-brand instead of falling back to generic Tailwind. */
+  --color-brand-50:  #E8FAF4;
+  --color-brand-100: #C9F2E5;
+  --color-brand-200: #97E6D1;
+  --color-brand-300: #5FD9B8;
+  --color-brand-400: #1DC797;
+  --color-brand-500: #0FB183;
+  --color-brand-600: #049769;
+  --color-brand-700: #037A55;
+  --color-brand-800: #036044;
+  --color-brand-900: #024E38;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme(colors.slate.300) transparent;
+}
+
+.dark * {
+  scrollbar-color: theme(colors.slate.700) transparent;
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.25s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
