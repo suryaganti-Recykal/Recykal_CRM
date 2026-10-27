@@ -77,8 +77,8 @@ export const CUSTOMER_TYPE_LABELS: Record<CustomerType, string> = {
   institute: 'Institute',
 }
 
-export type CompanyCustomerType = 'recycler' | 'pibo' | 'brands' | 'b2b' | 'corporate' | 'aggregator' | 'partners' | 'government_agency' | 'producer'
-export const COMPANY_CUSTOMER_TYPES: CompanyCustomerType[] = ['recycler', 'pibo', 'brands', 'b2b', 'corporate', 'aggregator', 'partners', 'government_agency', 'producer']
+export type CompanyCustomerType = 'recycler' | 'pibo' | 'brands' | 'b2b' | 'corporate' | 'aggregator' | 'partners' | 'government_agency' | 'producer' | 'prospect' | 'customer' | 'lead'
+export const COMPANY_CUSTOMER_TYPES: CompanyCustomerType[] = ['recycler', 'pibo', 'brands', 'b2b', 'corporate', 'aggregator', 'partners', 'government_agency', 'producer', 'prospect', 'customer', 'lead']
 export const COMPANY_CUSTOMER_TYPE_LABELS: Record<CompanyCustomerType, string> = {
   recycler: 'Recycler',
   pibo: 'PIBO',
@@ -89,6 +89,9 @@ export const COMPANY_CUSTOMER_TYPE_LABELS: Record<CompanyCustomerType, string> =
   partners: 'Partners',
   government_agency: 'Government Agency',
   producer: 'Producer',
+  prospect: 'Prospect',
+  customer: 'Customer',
+  lead: 'Lead',
 }
 
 export type Zone = 'north' | 'south' | 'east' | 'west' | 'international'

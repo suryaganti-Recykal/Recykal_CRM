@@ -1,11 +1,13 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import type { Company, Deal, Contact, CompanyCustomerType } from '../lib/types'
+import type { Company, CompanyCustomerType } from '../lib/types'
 import { COMPANY_CUSTOMER_TYPES, COMPANY_CUSTOMER_TYPE_LABELS } from '../lib/types'
 import { format } from 'date-fns'
-import { Plus, Building2 } from 'lucide-react'
+import { Plus, Building2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react'
 import Modal from '../components/ui/Modal'
+
+const PAGE_SIZE = 100
 
 const inputCls =
   'w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500'
@@ -42,62 +44,50 @@ const emptyForm: NewCompany = {
 export default function Companies() {
   const navigate = useNavigate()
   const [companies, setCompanies] = useState<Company[]>([])
-  const [deals, setDeals] = useState<Deal[]>([])
-  const [contacts, setContacts] = useState<Contact[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<NewCompany>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
-  useEffect(() => {
-    load()
-  }, [])
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
-    const [companiesRes, dealsRes, contactsRes] = await Promise.all([
-      supabase.from('companies').select('*').order('created_at', { ascending: false }),
-      supabase.from('deals').select('*'),
-      supabase.from('contacts').select('*'),
-    ])
-    if (!companiesRes.error && companiesRes.data) setCompanies(companiesRes.data as Company[])
-    if (!dealsRes.error && dealsRes.data) setDeals(dealsRes.data as Deal[])
-    if (!contactsRes.error && contactsRes.data) setContacts(contactsRes.data as Contact[])
+    const from = page * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+
+    let query = supabase
+      .from('companies')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to)
+
+    if (search.trim()) {
+      query = query.or(`name.ilike.%${search.trim()}%,industry.ilike.%${search.trim()}%,city.ilike.%${search.trim()}%,state.ilike.%${search.trim()}%,tag.ilike.%${search.trim()}%`)
+    }
+
+    const { data, count, error } = await query
+    if (!error && data) {
+      setCompanies(data as Company[])
+      setTotalCount(count ?? 0)
+    }
     setLoading(false)
-  }
+  }, [page, search])
 
-  const dealsByCompany = useMemo(() => {
-    const map = new Map<number, Deal[]>()
-    for (const d of deals) {
-      if (d.company_id == null) continue
-      const list = map.get(d.company_id) ?? []
-      list.push(d)
-      map.set(d.company_id, list)
-    }
-    return map
-  }, [deals])
+  useEffect(() => { load() }, [load])
 
-  const contactsByCompany = useMemo(() => {
-    const map = new Map<number, number>()
-    for (const c of contacts) {
-      if (c.company_id == null) continue
-      map.set(c.company_id, (map.get(c.company_id) ?? 0) + 1)
-    }
-    return map
-  }, [contacts])
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return companies
-    const q = search.toLowerCase()
-    return companies.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.industry?.toLowerCase().includes(q) ||
-        c.city?.toLowerCase().includes(q)
-    )
-  }, [companies, search])
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(0)
+      setSearch(searchInput)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   async function handleCreate() {
     if (!form.name.trim()) return
@@ -123,12 +113,17 @@ export default function Companies() {
     }
   }
 
+  const rangeStart = page * PAGE_SIZE + 1
+  const rangeEnd = Math.min((page + 1) * PAGE_SIZE, totalCount)
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Companies</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{filtered.length} of {companies.length} companies</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {totalCount === 0 ? 'No companies' : `${rangeStart}–${rangeEnd} of ${totalCount.toLocaleString()} companies`}
+          </p>
         </div>
         <button
           onClick={() => setModalOpen(true)}
@@ -139,13 +134,16 @@ export default function Companies() {
         </button>
       </div>
 
-      <input
-        type="text"
-        placeholder="Search name, industry, city…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className={`${inputCls} mb-4`}
-      />
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search name, industry, city, state, tag…"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className={`${inputCls} pl-9`}
+        />
+      </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <table className="w-full text-sm">
@@ -155,8 +153,8 @@ export default function Companies() {
               <th className="px-4 py-3 font-medium">Customer Type</th>
               <th className="px-4 py-3 font-medium">Industry</th>
               <th className="px-4 py-3 font-medium">City</th>
-              <th className="px-4 py-3 font-medium">Contacts</th>
-              <th className="px-4 py-3 font-medium">Deals</th>
+              <th className="px-4 py-3 font-medium">State</th>
+              <th className="px-4 py-3 font-medium">Tag</th>
               <th className="px-4 py-3 font-medium">Added</th>
             </tr>
           </thead>
@@ -164,86 +162,129 @@ export default function Companies() {
             {loading && (
               <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">Loading…</td></tr>
             )}
-            {!loading && filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">No companies yet.</td></tr>
+            {!loading && companies.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">No companies found.</td></tr>
             )}
-            {filtered.map((c) => {
-              const companyDeals = dealsByCompany.get(c.id) ?? []
-              return (
-                <Fragment key={c.id}>
-                  <tr
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
-                    onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}
-                  >
-                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/companies/${c.id}`) }}
-                        className="flex items-center gap-2 hover:text-brand-700 dark:hover:text-brand-400 hover:underline"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                          <Building2 size={14} className="text-slate-500 dark:text-slate-400" />
+            {!loading && companies.map((c) => (
+              <Fragment key={c.id}>
+                <tr
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
+                  onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}
+                >
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/companies/${c.id}`) }}
+                      className="flex items-center gap-2 hover:text-brand-700 dark:hover:text-brand-400 hover:underline"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                        <Building2 size={14} className="text-slate-500 dark:text-slate-400" />
+                      </div>
+                      <span className="truncate max-w-[300px]">{c.name}</span>
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                    {c.customer_type ? (COMPANY_CUSTOMER_TYPE_LABELS[c.customer_type] ?? c.customer_type) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{c.industry || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{c.city || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{c.state || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                    {c.tag ? (
+                      <span className="inline-block max-w-[160px] truncate text-xs rounded-full bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-2 py-0.5">
+                        {c.tag}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-500 whitespace-nowrap">
+                    {format(new Date(c.created_at), 'MMM d, yyyy')}
+                  </td>
+                </tr>
+                {expandedId === c.id && (
+                  <tr className="bg-slate-50 dark:bg-slate-800/30">
+                    <td colSpan={7} className="px-4 py-4">
+                      <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Website</p>
+                          <p className="text-slate-700 dark:text-slate-300">{c.website || '—'}</p>
                         </div>
-                        {c.name}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                      {c.customer_type ? COMPANY_CUSTOMER_TYPE_LABELS[c.customer_type] : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{c.industry || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{c.city || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{contactsByCompany.get(c.id) ?? 0}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{companyDeals.length}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-500 whitespace-nowrap">
-                      {format(new Date(c.created_at), 'MMM d, yyyy')}
+                        <div>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">GST</p>
+                          <p className="text-slate-700 dark:text-slate-300">{c.gst || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Employees</p>
+                          <p className="text-slate-700 dark:text-slate-300">{c.employees_range || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Annual Turnover</p>
+                          <p className="text-slate-700 dark:text-slate-300">{c.annual_turnover || '—'}</p>
+                        </div>
+                        {c.address && (
+                          <div className="col-span-2">
+                            <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Address</p>
+                            <p className="text-slate-700 dark:text-slate-300">{c.address}</p>
+                          </div>
+                        )}
+                        {c.notes && (
+                          <div className="col-span-2">
+                            <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Notes</p>
+                            <p className="text-slate-700 dark:text-slate-300 text-xs">{c.notes}</p>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
-                  {expandedId === c.id && (
-                    <tr className="bg-slate-50 dark:bg-slate-800/30">
-                      <td colSpan={7} className="px-4 py-4">
-                        <div className="grid grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Website</p>
-                            <p className="text-slate-700 dark:text-slate-300">{c.website || '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">GST</p>
-                            <p className="text-slate-700 dark:text-slate-300">{c.gst || '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Employees</p>
-                            <p className="text-slate-700 dark:text-slate-300">{c.employees_range || '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Annual Turnover</p>
-                            <p className="text-slate-700 dark:text-slate-300">{c.annual_turnover || '—'}</p>
-                          </div>
-                          {c.tag && (
-                            <div>
-                              <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Tag</p>
-                              <p className="text-slate-700 dark:text-slate-300">{c.tag}</p>
-                            </div>
-                          )}
-                          {companyDeals.length > 0 && (
-                            <div className="col-span-4">
-                              <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Deals</p>
-                              <div className="flex flex-wrap gap-2">
-                                {companyDeals.map((d) => (
-                                  <span key={d.id} className="text-xs rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1">
-                                    {d.name} — {d.stage}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              )
-            })}
+                )}
+              </Fragment>
+            ))}
           </tbody>
         </table>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Page {page + 1} of {totalPages}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(0)}
+                disabled={page === 0}
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="First page"
+              >
+                <ChevronsLeft size={16} />
+              </button>
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 0}
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Previous page"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="px-3 py-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                {page + 1}
+              </span>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= totalPages - 1}
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Next page"
+              >
+                <ChevronRight size={16} />
+              </button>
+              <button
+                onClick={() => setPage(totalPages - 1)}
+                disabled={page >= totalPages - 1}
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Last page"
+              >
+                <ChevronsRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Company">

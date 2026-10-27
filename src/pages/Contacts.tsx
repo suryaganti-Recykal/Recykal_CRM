@@ -16,7 +16,9 @@ import { exportToCsv } from '../lib/csv'
 import StatusBadge from '../components/StatusBadge'
 import ImportContactsModal from '../components/ImportContactsModal'
 import { format } from 'date-fns'
-import { Upload } from 'lucide-react'
+import { Upload, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+
+const PAGE_SIZE = 100
 
 type SourceTag = 'epr' | 'drs' | 'retrace' | 'marketplace' | 'rezolv' | 'resource' | 'market' | 'partner' | 'eprTool' | 'general'
 
@@ -168,6 +170,7 @@ export default function Contacts() {
   const [sourceFilter, setSourceFilter] = useState<'all' | SourceTag>('all')
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     load()
@@ -222,7 +225,7 @@ export default function Contacts() {
   }, [])
 
   const filtered = useMemo(() => {
-    return rows.filter((r) => {
+    const result = rows.filter((r) => {
       if (statusFilter !== 'all' && r.status !== statusFilter) return false
       if (sourceFilter !== 'all' && r.sourceTag !== sourceFilter) return false
       if (!search.trim()) return true
@@ -234,7 +237,14 @@ export default function Contacts() {
         r.city?.toLowerCase().includes(q)
       )
     })
+    setPage(0)
+    return result
   }, [rows, search, statusFilter, sourceFilter, companyById])
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const rangeStart = filtered.length === 0 ? 0 : page * PAGE_SIZE + 1
+  const rangeEnd = Math.min((page + 1) * PAGE_SIZE, filtered.length)
 
   function handleExport() {
     exportToCsv(
@@ -267,7 +277,9 @@ export default function Contacts() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Contacts</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{filtered.length} of {rows.length} inquiries</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {filtered.length === 0 ? 'No inquiries' : `${rangeStart}–${rangeEnd} of ${filtered.length.toLocaleString()} inquiries`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -346,7 +358,7 @@ export default function Contacts() {
             {!loading && filtered.length === 0 && (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">No contacts found.</td></tr>
             )}
-            {filtered.map((r) => (
+            {paged.map((r) => (
               <Fragment key={r.key}>
                 <tr
                   className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
@@ -472,6 +484,21 @@ export default function Contacts() {
             ))}
           </tbody>
         </table>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Page {page + 1} of {totalPages}
+            </p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(0)} disabled={page === 0} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed" title="First page"><ChevronsLeft size={16} /></button>
+              <button onClick={() => setPage(page - 1)} disabled={page === 0} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed" title="Previous page"><ChevronLeft size={16} /></button>
+              <span className="px-3 py-1 text-sm font-medium text-slate-700 dark:text-slate-300">{page + 1}</span>
+              <button onClick={() => setPage(page + 1)} disabled={page >= totalPages - 1} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed" title="Next page"><ChevronRight size={16} /></button>
+              <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed" title="Last page"><ChevronsRight size={16} /></button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
