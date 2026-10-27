@@ -81,3 +81,104 @@ body {
 .animate-fade-in {
   animation: fade-in 0.15s ease-out;
 }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up { animation: fade-in-up 0.3s ease-out; }
+.animate-scale-in { animation: scale-in 0.2s ease-out; }
+
+/* Premium elevation presets. */
+.shadow-elevation-sm {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+.shadow-elevation-md {
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+.shadow-elevation-lg {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08), 0 16px 32px rgba(15, 23, 42, 0.12);
+}
+.dark .shadow-elevation-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.dark .shadow-elevation-md {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.dark .shadow-elevation-lg {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Recykal brand gradients. The mesh is a layered radial-gradient composition
+   so the auth splash and other hero surfaces feel alive rather than a flat
+   block of green. */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #037A55 0%, #049769 35%, #1DC797 100%);
+}
+.bg-brand-gradient-soft {
+  background: linear-gradient(135deg, rgba(232, 250, 244, 0.9) 0%, rgba(201, 242, 229, 0.9) 100%);
+}
+.bg-brand-gradient-mesh {
+  background:
+    radial-gradient(at 15% 20%, rgba(29, 199, 151, 0.55) 0px, transparent 50%),
+    radial-gradient(at 85% 0%, rgba(132, 96, 212, 0.35) 0px, transparent 50%),
+    radial-gradient(at 0% 85%, rgba(0, 93, 255, 0.3) 0px, transparent 50%),
+    radial-gradient(at 85% 85%, rgba(4, 151, 105, 0.4) 0px, transparent 50%),
+    linear-gradient(135deg, #024C8A 0%, #037A55 50%, #049769 100%);
+}
+
+/* Skeleton loading shimmer used by <Skeleton>. */
+.skeleton {
+  background: linear-gradient(90deg,
+    theme(colors.slate.200) 0%,
+    theme(colors.slate.100) 50%,
+    theme(colors.slate.200) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.dark .skeleton {
+  background: linear-gradient(90deg,
+    theme(colors.slate.800) 0%,
+    theme(colors.slate.700) 50%,
+    theme(colors.slate.800) 100%);
+  background-size: 200% 100%;
+}
+
+/* Button micro-press — makes clicks feel tactile. */
+.btn-press {
+  transition: transform 0.1s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.btn-press:active {
+  transform: translateY(1px);
+}
+
+/* Softer focus ring. */
+.focus-ring {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(4, 151, 105, 0.2);
+  border-color: theme(colors.brand.500);
+}
+
+/* Clickable card lift. */
+.hover-lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08), 0 16px 32px rgba(15, 23, 42, 0.12);
+}
+.dark .hover-lift:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.5);
+}
