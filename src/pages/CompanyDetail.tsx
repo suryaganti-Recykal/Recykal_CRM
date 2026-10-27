@@ -148,7 +148,7 @@ export default function CompanyDetail() {
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
-            <CommunicationTimeline entityType="company" entityId={company.id} />
+            <CommunicationTimeline companyId={company.id} />
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">

@@ -53,11 +53,6 @@ export default function UserManagement() {
     return p.full_name ?? p.email.split('@')[0]
   }
 
-  function teamName(teamId: string | null) {
-    if (!teamId) return '—'
-    return teams.find((t) => t.id === teamId)?.name ?? '—'
-  }
-
   if (!isAdmin) {
     return (
       <div className="space-y-4">

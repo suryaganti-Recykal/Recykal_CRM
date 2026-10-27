@@ -33,7 +33,7 @@ export default function ExportBuilder() {
     if (!data || data.length === 0) { addToast('No data to export', 'error'); return }
 
     const csvHeaders = selectedFields.join(',')
-    const csvRows = data.map((row: Record<string, unknown>) =>
+    const csvRows = (data as unknown as Record<string, unknown>[]).map((row) =>
       selectedFields.map((f) => {
         const val = row[f]
         if (val == null) return ''

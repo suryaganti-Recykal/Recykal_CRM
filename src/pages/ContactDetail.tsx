@@ -317,7 +317,7 @@ export default function ContactDetail() {
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
-            <CommunicationTimeline entityType="contact" entityId={contact.id} />
+            <CommunicationTimeline contactId={contact.id} />
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">

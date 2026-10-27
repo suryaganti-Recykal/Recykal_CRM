@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Profile } from '../lib/types'
 import { Clock } from 'lucide-react'
+
+type ActorProfile = { id: string; full_name: string | null; email: string }
 
 interface AuditEntry {
   id: number
@@ -20,7 +21,7 @@ interface AuditLogProps {
 
 export default function AuditLog({ entityType, entityId }: AuditLogProps) {
   const [entries, setEntries] = useState<AuditEntry[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [profiles, setProfiles] = useState<ActorProfile[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

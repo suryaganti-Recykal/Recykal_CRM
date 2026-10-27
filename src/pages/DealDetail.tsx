@@ -222,7 +222,7 @@ export default function DealDetail() {
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
-            <CommunicationTimeline entityType="deal" entityId={deal.id} />
+            <CommunicationTimeline dealId={deal.id} />
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">

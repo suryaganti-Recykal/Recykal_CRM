@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useProfile } from '../contexts/ProfileContext'
-import { useToast } from '../contexts/ToastContext'
 import { DEAL_STAGE_LABELS, PIPELINE_LABELS } from '../lib/types'
 import type { DealStage, Pipeline } from '../lib/types'
-import { BarChart3, TrendingUp, Trophy, Filter, Save, Trash2 } from 'lucide-react'
+import { BarChart3, Trophy, Save, Trash2 } from 'lucide-react'
 
 interface SavedReport {
   id: string
@@ -19,8 +17,6 @@ interface DealStageStat { stage: DealStage; count: number; value: number }
 interface OwnerStat { owner: string; won_count: number; won_value: number; total_deals: number }
 
 export default function Reports() {
-  const { profile } = useProfile()
-  const { addToast } = useToast()
   const [tab, setTab] = useState<'funnel' | 'leaderboard' | 'saved'>('funnel')
   const [pipeline, setPipeline] = useState<Pipeline | ''>('')
   const [stageStats, setStageStats] = useState<DealStageStat[]>([])

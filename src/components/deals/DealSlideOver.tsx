@@ -24,13 +24,11 @@ type Tab = 'details' | 'notes' | 'activity'
 
 export default function DealSlideOver({
   deal,
-  companyById,
   companies,
   onClose,
   onUpdate,
 }: {
   deal: Deal
-  companyById: Map<number, Company>
   companies: Company[]
   onClose: () => void
   onUpdate: (dealId: number, data: Partial<Deal>) => Promise<boolean>

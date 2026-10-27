@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import type { Profile } from '../../lib/types'
 import { Mail, Phone, Video, Calendar, Clock } from 'lucide-react'
 
 interface TimelineEntry {

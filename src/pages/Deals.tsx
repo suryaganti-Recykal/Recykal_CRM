@@ -197,7 +197,6 @@ export default function Deals() {
       {selectedDeal && (
         <DealSlideOver
           deal={selectedDeal}
-          companyById={companyById}
           companies={companies}
           onClose={() => setSelectedDeal(null)}
           onUpdate={updateDeal}
