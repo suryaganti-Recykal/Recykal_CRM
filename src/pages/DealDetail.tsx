@@ -16,6 +16,10 @@ import {
 } from '../lib/types'
 import NotesPanel from '../components/NotesPanel'
 import ActivityTimeline from '../components/ActivityTimeline'
+import FileList from '../components/files/FileList'
+import QuoteBuilder from '../components/quotes/QuoteBuilder'
+import DealLineItems from '../components/deals/DealLineItems'
+import CommunicationTimeline from '../components/communication/CommunicationTimeline'
 
 const inputCls =
   'w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500'
@@ -196,15 +200,33 @@ export default function DealDetail() {
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Line Items</h2>
+            <DealLineItems dealId={deal.id} />
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Quotes</h2>
+            <QuoteBuilder dealId={deal.id} />
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Notes</h2>
             <NotesPanel entityType="deal" entityId={deal.id} />
           </div>
         </div>
 
-        <div>
+        <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Activity</h2>
             <ActivityTimeline entityType="deal" entityId={deal.id} />
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <CommunicationTimeline entityType="deal" entityId={deal.id} />
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <FileList entityType="deal" entityId={deal.id} />
           </div>
         </div>
       </div>

@@ -7,6 +7,8 @@ import { format } from 'date-fns'
 import { ArrowLeft, Building2 } from 'lucide-react'
 import NotesPanel from '../components/NotesPanel'
 import ActivityTimeline from '../components/ActivityTimeline'
+import FileList from '../components/files/FileList'
+import CommunicationTimeline from '../components/communication/CommunicationTimeline'
 
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -143,6 +145,14 @@ export default function CompanyDetail() {
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <CommunicationTimeline entityType="company" entityId={company.id} />
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <FileList entityType="company" entityId={company.id} />
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">

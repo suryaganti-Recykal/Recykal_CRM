@@ -1,3 +1,43 @@
+export type UserRole = 'admin' | 'manager' | 'member' | 'viewer'
+export const USER_ROLES: UserRole[] = ['admin', 'manager', 'member', 'viewer']
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Admin',
+  manager: 'Manager',
+  member: 'Member',
+  viewer: 'Viewer',
+}
+
+export interface Profile {
+  id: string
+  email: string
+  full_name: string | null
+  avatar_url: string | null
+  phone: string | null
+  role: UserRole
+  team_id: string | null
+  is_active: boolean
+  last_seen_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Team {
+  id: string
+  name: string
+  description: string | null
+  manager_id: string | null
+  created_at: string
+  manager?: Profile | null
+}
+
+export interface UserSettings {
+  user_id: string
+  default_pipeline: string | null
+  notifications_enabled: boolean
+  email_signature: string | null
+  settings_json: Record<string, unknown>
+}
+
 export type ContactStatus =
   | 'new' | 'contacted' | 'converted' | 'lost' | 'duplicate'
   | 'mql_not_contacted' | 'need_new_poc' | 'not_qualified' | 'in_follow_up' | 'not_answering'
@@ -311,6 +351,13 @@ export interface Company {
   domain: string | null
   hubspot_id: string | null
   account_owners: string | null
+  parent_company_id: number | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  country: string | null
+  pincode: string | null
+  owner_id: string | null
 }
 
 export interface Deal {
@@ -340,6 +387,10 @@ export interface Deal {
   inside_sales_poc_owner: string | null
   tag: string | null
   latest_approval_status: string | null
+  contact_role: string | null
+  currency: string | null
+  weighted_value: number | null
+  owner_id: string | null
 }
 
 export interface RecykalMarketLead {
@@ -364,4 +415,316 @@ export interface RecykalMarketLead {
   created_at: string
   updated_at: string
   last_contacted_at: string | null
+}
+
+// Phase 2 types
+
+export type ContactCompanyRole = 'decision_maker' | 'influencer' | 'champion' | 'end_user' | 'billing' | 'technical' | 'other'
+export const CONTACT_COMPANY_ROLES: ContactCompanyRole[] = ['decision_maker', 'influencer', 'champion', 'end_user', 'billing', 'technical', 'other']
+export const CONTACT_COMPANY_ROLE_LABELS: Record<ContactCompanyRole, string> = {
+  decision_maker: 'Decision Maker',
+  influencer: 'Influencer',
+  champion: 'Champion',
+  end_user: 'End User',
+  billing: 'Billing',
+  technical: 'Technical',
+  other: 'Other',
+}
+
+export interface ContactCompanyRoleEntry {
+  id: string
+  contact_id: number
+  company_id: number
+  role: ContactCompanyRole | null
+  is_primary: boolean
+  created_at: string
+}
+
+export type ProductCategory = 'epr' | 'itad' | 'rethink_plus' | 'ddrs' | 'other'
+export const PRODUCT_CATEGORIES: ProductCategory[] = ['epr', 'itad', 'rethink_plus', 'ddrs', 'other']
+export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
+  epr: 'EPR',
+  itad: 'ITAD',
+  rethink_plus: 'Rethink+',
+  ddrs: 'dDRS',
+  other: 'Other',
+}
+
+export type ProductUnit = 'per_ton' | 'per_unit' | 'lump_sum' | 'monthly' | 'per_kg' | 'per_piece'
+export const PRODUCT_UNITS: ProductUnit[] = ['per_ton', 'per_unit', 'lump_sum', 'monthly', 'per_kg', 'per_piece']
+export const PRODUCT_UNIT_LABELS: Record<ProductUnit, string> = {
+  per_ton: 'Per Ton',
+  per_unit: 'Per Unit',
+  lump_sum: 'Lump Sum',
+  monthly: 'Monthly',
+  per_kg: 'Per Kg',
+  per_piece: 'Per Piece',
+}
+
+export interface Product {
+  id: string
+  name: string
+  code: string | null
+  description: string | null
+  unit_price: number | null
+  unit: ProductUnit | null
+  category: ProductCategory | null
+  is_active: boolean
+  created_at: string
+}
+
+export interface DealLineItem {
+  id: string
+  deal_id: number
+  product_id: string | null
+  description: string | null
+  quantity: number
+  unit_price: number | null
+  discount_percent: number
+  total: number | null
+  created_at: string
+  product?: Product | null
+}
+
+export interface Tag {
+  id: string
+  name: string
+  color: string
+  entity_type: 'contact' | 'company' | 'deal' | null
+  created_at: string
+}
+
+export interface EntityTag {
+  tag_id: string
+  entity_type: 'contact' | 'company' | 'deal'
+  entity_id: number
+}
+
+export type CustomFieldType = 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'boolean' | 'url' | 'email'
+export const CUSTOM_FIELD_TYPES: CustomFieldType[] = ['text', 'number', 'date', 'select', 'multiselect', 'boolean', 'url', 'email']
+
+export interface CustomField {
+  id: string
+  entity_type: 'contact' | 'company' | 'deal'
+  field_name: string
+  label: string
+  field_type: CustomFieldType
+  options: string[] | null
+  is_required: boolean
+  sort_order: number
+  created_at: string
+}
+
+export interface CustomFieldValue {
+  id: string
+  custom_field_id: string
+  entity_type: string
+  entity_id: number
+  value_text: string | null
+  value_number: number | null
+  value_date: string | null
+  value_json: unknown | null
+}
+
+// Phase 5 types
+
+export type EmailDirection = 'inbound' | 'outbound'
+export type EmailStatus = 'draft' | 'sent' | 'delivered' | 'opened' | 'bounced' | 'failed'
+export type EmailTemplateCategory = 'follow_up' | 'intro' | 'proposal' | 'closing' | 'general'
+
+export interface EmailTemplate {
+  id: string
+  name: string
+  subject: string | null
+  body_html: string | null
+  category: EmailTemplateCategory | null
+  owner_id: string | null
+  is_shared: boolean
+  created_at: string
+}
+
+export interface Email {
+  id: string
+  direction: EmailDirection
+  from_address: string | null
+  to_addresses: string[] | null
+  cc_addresses: string[] | null
+  subject: string | null
+  body_html: string | null
+  body_text: string | null
+  status: EmailStatus
+  sent_at: string | null
+  opened_at: string | null
+  contact_id: number | null
+  deal_id: number | null
+  company_id: number | null
+  sender_id: string | null
+  template_id: string | null
+  created_at: string
+}
+
+export type CallOutcome = 'connected' | 'no_answer' | 'voicemail' | 'busy' | 'wrong_number' | 'left_message'
+export const CALL_OUTCOMES: CallOutcome[] = ['connected', 'no_answer', 'voicemail', 'busy', 'wrong_number', 'left_message']
+export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
+  connected: 'Connected',
+  no_answer: 'No Answer',
+  voicemail: 'Voicemail',
+  busy: 'Busy',
+  wrong_number: 'Wrong Number',
+  left_message: 'Left Message',
+}
+
+export interface CallLog {
+  id: string
+  contact_id: number | null
+  deal_id: number | null
+  caller_id: string | null
+  direction: 'inbound' | 'outbound' | null
+  duration_seconds: number | null
+  outcome: CallOutcome | null
+  notes: string | null
+  called_at: string
+}
+
+export type MeetingType = 'in_person' | 'video' | 'phone'
+export const MEETING_TYPES: MeetingType[] = ['in_person', 'video', 'phone']
+export const MEETING_TYPE_LABELS: Record<MeetingType, string> = {
+  in_person: 'In Person',
+  video: 'Video Call',
+  phone: 'Phone Call',
+}
+
+export interface Meeting {
+  id: string
+  title: string
+  description: string | null
+  start_time: string | null
+  end_time: string | null
+  location: string | null
+  meeting_type: MeetingType | null
+  organizer_id: string | null
+  contact_id: number | null
+  deal_id: number | null
+  company_id: number | null
+  outcome: string | null
+  created_at: string
+}
+
+// Phase 7 types
+
+export interface FileAttachment {
+  id: string
+  entity_type: 'contact' | 'company' | 'deal'
+  entity_id: number
+  file_name: string
+  file_size: number | null
+  mime_type: string | null
+  storage_path: string
+  uploaded_by: string | null
+  created_at: string
+}
+
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired'
+
+export interface Quote {
+  id: string
+  deal_id: number
+  quote_number: string | null
+  status: QuoteStatus
+  valid_until: string | null
+  subtotal: number
+  tax_percent: number
+  total: number
+  terms: string | null
+  notes: string | null
+  created_by: string | null
+  sent_at: string | null
+  created_at: string
+}
+
+export interface QuoteLineItem {
+  id: string
+  quote_id: string
+  description: string | null
+  quantity: number
+  unit_price: number | null
+  discount_percent: number
+  total: number | null
+  hsn_code: string | null
+}
+
+// Phase 6 types
+
+export type AutomationTrigger = 'stage_change' | 'field_change' | 'created' | 'time_based'
+export type AutomationAction = 'send_email' | 'create_task' | 'update_field' | 'notify' | 'assign_owner'
+
+export interface Automation {
+  id: string
+  name: string
+  entity_type: 'contact' | 'deal' | 'company' | null
+  trigger_type: AutomationTrigger
+  trigger_config: Record<string, unknown>
+  action_type: AutomationAction
+  action_config: Record<string, unknown>
+  is_active: boolean
+  owner_id: string | null
+  created_at: string
+}
+
+export type NotificationType = 'deal_won' | 'task_due' | 'mention' | 'automation' | 'assignment' | 'general'
+
+export interface Notification {
+  id: string
+  user_id: string
+  title: string
+  body: string | null
+  link: string | null
+  is_read: boolean
+  notification_type: NotificationType | null
+  created_at: string
+}
+
+// ── Phase 8: Import, API Keys & Webhooks ──
+
+export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
+export interface ImportJob {
+  id: string
+  entity_type: string
+  file_name: string | null
+  total_rows: number
+  created_count: number
+  updated_count: number
+  skipped_count: number
+  failed_count: number
+  status: ImportStatus
+  error_log: unknown[]
+  column_mapping: Record<string, string>
+  started_by: string | null
+  created_at: string
+  completed_at: string | null
+}
+
+export interface ApiKey {
+  id: string
+  name: string
+  key_hash: string
+  key_prefix: string
+  permissions: Record<string, string>
+  owner_id: string | null
+  last_used_at: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export interface Webhook {
+  id: string
+  name: string
+  url: string
+  events: string[]
+  secret: string | null
+  is_active: boolean
+  owner_id: string | null
+  last_triggered_at: string | null
+  created_at: string
 }

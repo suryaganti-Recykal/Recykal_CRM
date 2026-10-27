@@ -24,6 +24,9 @@ import { ArrowLeft, Plus } from 'lucide-react'
 import Avatar from '../components/ui/Avatar'
 import NotesPanel from '../components/NotesPanel'
 import ActivityTimeline from '../components/ActivityTimeline'
+import FileList from '../components/files/FileList'
+import CommunicationTimeline from '../components/communication/CommunicationTimeline'
+import EmailComposer from '../components/email/EmailComposer'
 
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -307,6 +310,18 @@ export default function ContactDetail() {
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Activity</h2>
             <ActivityTimeline entityType="contact" entityId={contact.id} />
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <EmailComposer contactId={contact.id} defaultTo={contact.email ?? ''} contactName={contact.name ?? undefined} />
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <CommunicationTimeline entityType="contact" entityId={contact.id} />
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+            <FileList entityType="contact" entityId={contact.id} />
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">

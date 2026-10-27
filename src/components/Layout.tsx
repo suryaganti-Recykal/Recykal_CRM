@@ -15,8 +15,15 @@ import {
   Building2,
   Handshake,
   CheckSquare,
+  Settings,
+  Search,
+  BarChart3,
+  FileText,
 } from 'lucide-react'
 import Avatar from './ui/Avatar'
+import { useProfile } from '../contexts/ProfileContext'
+import GlobalSearch from './GlobalSearch'
+import NotificationBell from './ui/NotificationBell'
 
 const navItems = [
   { to: '/', label: 'Dashboard', end: true, icon: LayoutDashboard },
@@ -24,15 +31,20 @@ const navItems = [
   { to: '/companies', label: 'Companies', icon: Building2 },
   { to: '/deals', label: 'Deals', icon: Handshake },
   { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { to: '/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/quotes', label: 'Quotes', icon: FileText },
   { to: '/careers', label: 'Career Applications', icon: Briefcase },
   { to: '/newsletter', label: 'Newsletter', icon: Mail },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Layout() {
   const { user, signOut } = useAuth()
+  const { profile } = useProfile()
   const { theme, toggleTheme } = useTheme()
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
+  const displayName = profile?.full_name ?? user?.email ?? '?'
   const currentLabel = navItems.find((i) => (i.end ? location.pathname === i.to : location.pathname.startsWith(i.to)))?.label ?? ''
 
   return (
@@ -96,10 +108,23 @@ export default function Layout() {
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
+        <GlobalSearch />
         <header className="h-14 shrink-0 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{currentLabel}</h2>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+              title="Search (Ctrl+K)"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 text-xs transition-colors"
+            >
+              <Search size={14} />
+              <span>Search...</span>
+              <kbd className="ml-2 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-mono">Ctrl+K</kbd>
+            </button>
+
+            <NotificationBell />
+
             <button
               onClick={toggleTheme}
               title="Toggle theme"
@@ -110,8 +135,8 @@ export default function Layout() {
 
             <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
 
-            <Avatar label={user?.email ?? '?'} size={30} />
-            <span className="text-sm text-slate-600 dark:text-slate-400 max-w-40 truncate hidden sm:inline">{user?.email}</span>
+            <Avatar label={displayName} size={30} />
+            <span className="text-sm text-slate-600 dark:text-slate-400 max-w-40 truncate hidden sm:inline">{displayName}</span>
 
             <button
               onClick={signOut}
