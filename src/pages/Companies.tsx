@@ -1,10 +1,15 @@
 import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import type { Company, CompanyCustomerType } from '../lib/types'
-import { COMPANY_CUSTOMER_TYPES, COMPANY_CUSTOMER_TYPE_LABELS } from '../lib/types'
+import type { CompanyCustomerType, CompanyOverview, CompanyStatus, CompanyVertical } from '../lib/types'
+import {
+  COMPANY_CUSTOMER_TYPES,
+  COMPANY_CUSTOMER_TYPE_LABELS,
+  COMPANY_STATUS_LABELS,
+  COMPANY_VERTICALS,
+} from '../lib/types'
 import { format } from 'date-fns'
-import { Plus, Building2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react'
+import { Plus, Building2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 
 const PAGE_SIZE = 100
@@ -12,6 +17,19 @@ const PAGE_SIZE = 100
 const inputCls =
   'w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500'
 const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1'
+
+const VERTICAL_STYLES: Record<CompanyVertical, string> = {
+  EPR: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  Marketplace: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  'Re-commerce': 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  DRS: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+}
+
+const STATUS_STYLES: Record<CompanyStatus, string> = {
+  has_deals: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  contacts_only: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  no_contacts_no_deals: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+}
 
 interface NewCompany {
   name: string
@@ -43,18 +61,36 @@ const emptyForm: NewCompany = {
 
 export default function Companies() {
   const navigate = useNavigate()
-  const [companies, setCompanies] = useState<Company[]>([])
+  const [companies, setCompanies] = useState<CompanyOverview[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [vertical, setVertical] = useState<CompanyVertical | ''>('')
+  const [status, setStatus] = useState<CompanyStatus | ''>('')
+  const [stateFilter, setStateFilter] = useState('')
+  const [stateOptions, setStateOptions] = useState<string[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<NewCompany>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+  const filtersActive = !!(vertical || status || stateFilter || search.trim())
+
+  useEffect(() => {
+    supabase
+      .from('cpcb_company_overview')
+      .select('state')
+      .not('state', 'is', null)
+      .then(({ data }) => {
+        if (data) {
+          const unique = [...new Set((data as { state: string }[]).map((r) => r.state))].sort()
+          setStateOptions(unique)
+        }
+      })
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -62,22 +98,26 @@ export default function Companies() {
     const to = from + PAGE_SIZE - 1
 
     let query = supabase
-      .from('companies')
+      .from('cpcb_company_overview')
       .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .order('name')
       .range(from, to)
 
-    if (search.trim()) {
-      query = query.or(`name.ilike.%${search.trim()}%,industry.ilike.%${search.trim()}%,city.ilike.%${search.trim()}%,state.ilike.%${search.trim()}%,tag.ilike.%${search.trim()}%`)
+    const term = search.trim()
+    if (term) {
+      query = query.or(`name.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%,tag.ilike.%${term}%`)
     }
+    if (vertical) query = query.eq('vertical', vertical)
+    if (status) query = query.eq('status', status)
+    if (stateFilter) query = query.eq('state', stateFilter)
 
     const { data, count, error } = await query
     if (!error && data) {
-      setCompanies(data as Company[])
+      setCompanies(data as CompanyOverview[])
       setTotalCount(count ?? 0)
     }
     setLoading(false)
-  }, [page, search])
+  }, [page, search, vertical, status, stateFilter])
 
   useEffect(() => { load() }, [load])
 
@@ -88,6 +128,19 @@ export default function Companies() {
     }, 400)
     return () => clearTimeout(timer)
   }, [searchInput])
+
+  useEffect(() => {
+    setPage(0)
+  }, [vertical, status, stateFilter])
+
+  function clearFilters() {
+    setSearchInput('')
+    setSearch('')
+    setVertical('')
+    setStatus('')
+    setStateFilter('')
+    setPage(0)
+  }
 
   async function handleCreate() {
     if (!form.name.trim()) return
@@ -122,7 +175,7 @@ export default function Companies() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Companies</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {totalCount === 0 ? 'No companies' : `${rangeStart}–${rangeEnd} of ${totalCount.toLocaleString()} companies`}
+            {totalCount === 0 ? 'No companies match' : `${rangeStart}–${rangeEnd} of ${totalCount.toLocaleString()} companies`}
           </p>
         </div>
         <button
@@ -134,15 +187,46 @@ export default function Companies() {
         </button>
       </div>
 
-      <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search name, industry, city, state, tag…"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          className={`${inputCls} pl-9`}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+        <div className="relative md:col-span-2">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search name, city, state, tag…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className={`${inputCls} pl-9`}
+          />
+        </div>
+        <select className={inputCls} value={vertical} onChange={(e) => setVertical(e.target.value as CompanyVertical | '')}>
+          <option value="">All verticals</option>
+          {COMPANY_VERTICALS.map((v) => (
+            <option key={v} value={v}>{v}</option>
+          ))}
+        </select>
+        <select className={inputCls} value={status} onChange={(e) => setStatus(e.target.value as CompanyStatus | '')}>
+          <option value="">All statuses</option>
+          {(Object.keys(COMPANY_STATUS_LABELS) as CompanyStatus[]).map((s) => (
+            <option key={s} value={s}>{COMPANY_STATUS_LABELS[s]}</option>
+          ))}
+        </select>
+        <div className="flex gap-2">
+          <select className={inputCls} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+            <option value="">All states</option>
+            {stateOptions.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          {filtersActive && (
+            <button
+              onClick={clearFilters}
+              className="shrink-0 flex items-center gap-1 px-3 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Clear all filters"
+            >
+              <X size={14} /> Clear
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -150,20 +234,21 @@ export default function Companies() {
           <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
             <tr className="text-left text-slate-500 dark:text-slate-400">
               <th className="px-4 py-3 font-medium">Company</th>
-              <th className="px-4 py-3 font-medium">Customer Type</th>
-              <th className="px-4 py-3 font-medium">Industry</th>
+              <th className="px-4 py-3 font-medium">Vertical</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium text-right">Contacts</th>
+              <th className="px-4 py-3 font-medium text-right">Deals</th>
               <th className="px-4 py-3 font-medium">City</th>
               <th className="px-4 py-3 font-medium">State</th>
               <th className="px-4 py-3 font-medium">Tag</th>
-              <th className="px-4 py-3 font-medium">Added</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {loading && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">Loading…</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">Loading…</td></tr>
             )}
             {!loading && companies.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">No companies found.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">No companies match these filters.</td></tr>
             )}
             {!loading && companies.map((c) => (
               <Fragment key={c.id}>
@@ -182,10 +267,18 @@ export default function Companies() {
                       <span className="truncate max-w-[300px]">{c.name}</span>
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                    {c.customer_type ? (COMPANY_CUSTOMER_TYPE_LABELS[c.customer_type] ?? c.customer_type) : '—'}
+                  <td className="px-4 py-3">
+                    {c.vertical ? (
+                      <span className={`inline-block text-xs rounded-full px-2 py-0.5 ${VERTICAL_STYLES[c.vertical]}`}>{c.vertical}</span>
+                    ) : <span className="text-slate-400">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{c.industry || '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block text-xs rounded-full px-2 py-0.5 ${STATUS_STYLES[c.status]}`}>
+                      {COMPANY_STATUS_LABELS[c.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">{c.contact_count}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">{c.deal_count}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{c.city || '—'}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{c.state || '—'}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
@@ -195,42 +288,29 @@ export default function Companies() {
                       </span>
                     ) : '—'}
                   </td>
-                  <td className="px-4 py-3 text-slate-500 dark:text-slate-500 whitespace-nowrap">
-                    {format(new Date(c.created_at), 'MMM d, yyyy')}
-                  </td>
                 </tr>
                 {expandedId === c.id && (
                   <tr className="bg-slate-50 dark:bg-slate-800/30">
-                    <td colSpan={7} className="px-4 py-4">
+                    <td colSpan={8} className="px-4 py-4">
                       <div className="grid grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Website</p>
                           <p className="text-slate-700 dark:text-slate-300">{c.website || '—'}</p>
                         </div>
                         <div>
-                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">GST</p>
-                          <p className="text-slate-700 dark:text-slate-300">{c.gst || '—'}</p>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Domain</p>
+                          <p className="text-slate-700 dark:text-slate-300">{c.domain || '—'}</p>
                         </div>
                         <div>
-                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Employees</p>
-                          <p className="text-slate-700 dark:text-slate-300">{c.employees_range || '—'}</p>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">First contact</p>
+                          <p className="text-slate-700 dark:text-slate-300">
+                            {c.first_contact_at ? format(new Date(c.first_contact_at), 'MMM d, yyyy') : '—'}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Annual Turnover</p>
-                          <p className="text-slate-700 dark:text-slate-300">{c.annual_turnover || '—'}</p>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Data completeness</p>
+                          <p className="text-slate-700 dark:text-slate-300">{c.data_fields_filled} of 4 fields</p>
                         </div>
-                        {c.address && (
-                          <div className="col-span-2">
-                            <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Address</p>
-                            <p className="text-slate-700 dark:text-slate-300">{c.address}</p>
-                          </div>
-                        )}
-                        {c.notes && (
-                          <div className="col-span-2">
-                            <p className="text-slate-400 dark:text-slate-500 text-xs mb-1">Notes</p>
-                            <p className="text-slate-700 dark:text-slate-300 text-xs">{c.notes}</p>
-                          </div>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -240,7 +320,6 @@ export default function Companies() {
           </tbody>
         </table>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
             <p className="text-sm text-slate-500 dark:text-slate-400">

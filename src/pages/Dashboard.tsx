@@ -2,21 +2,43 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../contexts/ProfileContext'
-import type { Contact, CareerApplication, NewsletterSubscriber, Company, Deal, DealStage, Pipeline } from '../lib/types'
+import type { DealStage, Pipeline } from '../lib/types'
 import { DEAL_STAGES, DEAL_STAGE_LABELS, PIPELINES, PIPELINE_LABELS, CONTACT_STATUS_LABELS, type ContactStatus } from '../lib/types'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
-import { subDays, format } from 'date-fns'
+import { format } from 'date-fns'
 import {
   Users, Building2, Handshake, TrendingUp, Trophy, XCircle, Mail,
   Briefcase, ArrowUpRight, Target, Flame, Clock
 } from 'lucide-react'
 
-interface Stats {
-  contacts: Contact[]
-  applications: CareerApplication[]
-  subscribers: NewsletterSubscriber[]
-  companies: Company[]
-  deals: Deal[]
+interface ChartItem { name: string; count: number }
+
+interface DashboardStats {
+  company_count: number
+  contact_count: number
+  deal_count: number
+  open_deals: number
+  open_deals_value: number
+  won_deals: number
+  won_value: number
+  lost_deals: number
+  win_rate: number | null
+  new_contacts_7d: number
+  application_count: number
+  subscriber_count: number
+  new_applications_7d: number
+  new_subscribers_7d: number
+  epr_contact_count: number
+  drs_contact_count: number
+  contacts_by_status: ChartItem[]
+  contacts_by_category: ChartItem[]
+  contacts_by_epr_category: ChartItem[]
+  contacts_drs_by_city: ChartItem[]
+  companies_by_industry: ChartItem[]
+  companies_by_vertical: ChartItem[]
+  deals_by_stage: ChartItem[]
+  deals_by_pipeline: ChartItem[]
+  applications_by_interest: ChartItem[]
 }
 
 function greeting(name: string | null): string {
@@ -100,17 +122,6 @@ function StatCard({ label, value, sublabel, to, icon: Icon, trend, accent = 'bra
   return to ? <Link to={to} className="block">{content}</Link> : content
 }
 
-function countBy<T>(items: T[], key: (item: T) => string | null): { name: string; count: number }[] {
-  const map = new Map<string, number>()
-  for (const item of items) {
-    const k = key(item) || 'Unspecified'
-    map.set(k, (map.get(k) ?? 0) + 1)
-  }
-  return Array.from(map.entries())
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-}
-
 function formatValue(v: number): string {
   if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)} Cr`
   if (v >= 100000) return `₹${(v / 100000).toFixed(1)} L`
@@ -119,68 +130,38 @@ function formatValue(v: number): string {
 
 export default function Dashboard() {
   const { profile } = useProfile()
-  const [stats, setStats] = useState<Stats | null>(null)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
 
   useEffect(() => {
     load()
   }, [])
 
   async function load() {
-    const [contactsRes, applicationsRes, subscribersRes, companiesRes, dealsRes] = await Promise.all([
-      supabase.from('contacts').select('*'),
-      supabase.from('career_applications').select('*'),
-      supabase.from('newsletter_subscribers').select('*'),
-      supabase.from('companies').select('*'),
-      supabase.from('deals').select('*'),
-    ])
-    setStats({
-      contacts: (contactsRes.data as Contact[]) ?? [],
-      applications: (applicationsRes.data as CareerApplication[]) ?? [],
-      subscribers: (subscribersRes.data as NewsletterSubscriber[]) ?? [],
-      companies: (companiesRes.data as Company[]) ?? [],
-      deals: (dealsRes.data as Deal[]) ?? [],
-    })
+    const { data, error } = await supabase.rpc('dashboard_stats')
+    if (!error && data) setStats(data as DashboardStats)
   }
 
   if (!stats) {
     return <div className="p-8 text-slate-400 dark:text-slate-500">Loading dashboard…</div>
   }
 
-  const weekAgo = subDays(new Date(), 7)
-  const newContactsThisWeek = stats.contacts.filter((c) => new Date(c.created_at) >= weekAgo).length
-  const newApplicationsThisWeek = stats.applications.filter((a) => new Date(a.created_at) >= weekAgo).length
-  const newSubscribersThisWeek = stats.subscribers.filter((s) => new Date(s.subscribed_at) >= weekAgo).length
+  const closedDeals = stats.won_deals + stats.lost_deals
 
-  const contactsByCategory = countBy(stats.contacts, (c) => c.category)
-  const applicationsByInterest = countBy(stats.applications, (a) => a.interest_area)
-  const contactsByStatus = countBy(stats.contacts, (c) => c.contact_status).map((row) => ({
+  const contactsByStatus = stats.contacts_by_status.map((row) => ({
     ...row,
     name: CONTACT_STATUS_LABELS[row.name as ContactStatus] ?? row.name,
   }))
-  const eprContacts = stats.contacts.filter((c) => c.epr_category)
-  const contactsByEprCategory = countBy(eprContacts, (c) => c.epr_category)
-  const drsContacts = stats.contacts.filter((c) => c.source === 'website_form_drs')
-  const drsContactsByCity = countBy(drsContacts, (c) => c.city)
-
-  const openDeals = stats.deals.filter((d) => d.stage !== 'won' && d.stage !== 'lost')
-  const wonDeals = stats.deals.filter((d) => d.stage === 'won')
-  const lostDeals = stats.deals.filter((d) => d.stage === 'lost')
-  const closedDeals = wonDeals.length + lostDeals.length
-  const winRate = closedDeals > 0 ? Math.round((wonDeals.length / closedDeals) * 100) : null
-  const openPipelineValue = openDeals.reduce((sum, d) => sum + (d.value ?? 0), 0)
-  const wonValue = wonDeals.reduce((sum, d) => sum + (d.value ?? 0), 0)
 
   const dealsByStage = DEAL_STAGES.map((stage) => ({
     name: DEAL_STAGE_LABELS[stage],
     stage,
-    count: stats.deals.filter((d) => d.stage === stage).length,
+    count: stats.deals_by_stage.find((d) => d.name === stage)?.count ?? 0,
   }))
   const dealsByPipeline = PIPELINES.map((pipeline) => ({
     name: PIPELINE_LABELS[pipeline],
     pipeline,
-    count: stats.deals.filter((d) => d.pipeline === pipeline).length,
+    count: stats.deals_by_pipeline.find((d) => d.name === pipeline)?.count ?? 0,
   }))
-  const companiesByIndustry = countBy(stats.companies, (c) => c.industry)
 
   const today = format(new Date(), 'EEEE, MMMM d')
 
@@ -202,8 +183,8 @@ export default function Dashboard() {
             <div className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5">{today}</div>
             <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">{greeting(profile?.full_name ?? null)}</h1>
             <p className="text-sm text-white/80 mt-1.5 max-w-md">
-              {openDeals.length > 0
-                ? `You have ${openDeals.length} open deals worth ${formatValue(openPipelineValue)} in play.`
+              {stats.open_deals > 0
+                ? `You have ${stats.open_deals} open deals worth ${formatValue(stats.open_deals_value)} in play.`
                 : "Let's get some deals moving today."}
             </p>
           </div>
@@ -223,11 +204,11 @@ export default function Dashboard() {
         <h2 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Sales Pipeline</h2>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <StatCard label="Companies" value={stats.companies.length} to="/companies" icon={Building2} accent="blue" />
-        <StatCard label="Open Deals" value={openDeals.length} sublabel={formatValue(openPipelineValue)} to="/deals" icon={Flame} accent="amber" />
-        <StatCard label="Won Value" value={formatValue(wonValue)} sublabel={`${wonDeals.length} deals won`} to="/deals" icon={Trophy} accent="brand" />
-        <StatCard label="Win Rate" value={winRate == null ? '—' : `${winRate}%`} sublabel={`${closedDeals} closed`} to="/deals" icon={TrendingUp} accent="purple" />
-        <StatCard label="Lost Deals" value={lostDeals.length} to="/deals" icon={XCircle} accent="rose" />
+        <StatCard label="Companies" value={stats.company_count.toLocaleString()} to="/companies" icon={Building2} accent="blue" />
+        <StatCard label="Open Deals" value={stats.open_deals} sublabel={formatValue(stats.open_deals_value)} to="/deals" icon={Flame} accent="amber" />
+        <StatCard label="Won Value" value={formatValue(stats.won_value)} sublabel={`${stats.won_deals} deals won`} to="/deals" icon={Trophy} accent="brand" />
+        <StatCard label="Win Rate" value={stats.win_rate == null ? '—' : `${stats.win_rate}%`} sublabel={`${closedDeals} closed`} to="/deals" icon={TrendingUp} accent="purple" />
+        <StatCard label="Lost Deals" value={stats.lost_deals} to="/deals" icon={XCircle} accent="rose" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -276,11 +257,11 @@ export default function Dashboard() {
             <span className="w-1.5 h-1.5 rounded-full bg-recykal-midnight-blue" />
             Companies by Industry
           </h2>
-          {companiesByIndustry.length === 0 ? (
+          {stats.companies_by_industry.length === 0 ? (
             <p className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center">No companies yet</p>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={companiesByIndustry} layout="vertical" margin={{ left: 20 }}>
+              <BarChart data={stats.companies_by_industry} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
@@ -297,11 +278,11 @@ export default function Dashboard() {
         <h2 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Leads & Marketing</h2>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <StatCard label="Total Contacts" value={stats.contacts.length} sublabel={`${newContactsThisWeek} new this week`} to="/contacts" icon={Users} accent="brand" trend={newContactsThisWeek > 0 ? { direction: 'up', label: `+${newContactsThisWeek}` } : undefined} />
-        <StatCard label="EPR Inquiries" value={eprContacts.length} sublabel="via EPR form" icon={Target} accent="purple" />
-        <StatCard label="DRS Inquiries" value={drsContacts.length} sublabel="via DRS form" icon={Target} accent="blue" />
-        <StatCard label="Career Applications" value={stats.applications.length} sublabel={`${newApplicationsThisWeek} new this week`} to="/careers" icon={Briefcase} accent="amber" trend={newApplicationsThisWeek > 0 ? { direction: 'up', label: `+${newApplicationsThisWeek}` } : undefined} />
-        <StatCard label="Newsletter Subscribers" value={stats.subscribers.length} sublabel={`${newSubscribersThisWeek} new this week`} to="/newsletter" icon={Mail} accent="rose" trend={newSubscribersThisWeek > 0 ? { direction: 'up', label: `+${newSubscribersThisWeek}` } : undefined} />
+        <StatCard label="Total Contacts" value={stats.contact_count.toLocaleString()} sublabel={`${stats.new_contacts_7d} new this week`} to="/contacts" icon={Users} accent="brand" trend={stats.new_contacts_7d > 0 ? { direction: 'up', label: `+${stats.new_contacts_7d}` } : undefined} />
+        <StatCard label="EPR Inquiries" value={stats.epr_contact_count} sublabel="via EPR form" icon={Target} accent="purple" />
+        <StatCard label="DRS Inquiries" value={stats.drs_contact_count} sublabel="via DRS form" icon={Target} accent="blue" />
+        <StatCard label="Career Applications" value={stats.application_count} sublabel={`${stats.new_applications_7d} new this week`} to="/careers" icon={Briefcase} accent="amber" trend={stats.new_applications_7d > 0 ? { direction: 'up', label: `+${stats.new_applications_7d}` } : undefined} />
+        <StatCard label="Newsletter Subscribers" value={stats.subscriber_count} sublabel={`${stats.new_subscribers_7d} new this week`} to="/newsletter" icon={Mail} accent="rose" trend={stats.new_subscribers_7d > 0 ? { direction: 'up', label: `+${stats.new_subscribers_7d}` } : undefined} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -311,7 +292,7 @@ export default function Dashboard() {
             Contacts by Category
           </h2>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={contactsByCategory} layout="vertical" margin={{ left: 20 }}>
+            <BarChart data={stats.contacts_by_category} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
               <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
@@ -327,7 +308,7 @@ export default function Dashboard() {
             Applications by Interest Area
           </h2>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={applicationsByInterest} layout="vertical" margin={{ left: 20 }}>
+            <BarChart data={stats.applications_by_interest} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
               <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
@@ -342,11 +323,11 @@ export default function Dashboard() {
             <span className="w-1.5 h-1.5 rounded-full bg-recykal-bright-blue" />
             EPR Inquiries by Category
           </h2>
-          {contactsByEprCategory.length === 0 ? (
+          {stats.contacts_by_epr_category.length === 0 ? (
             <p className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center">No EPR submissions yet</p>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={contactsByEprCategory} layout="vertical" margin={{ left: 20 }}>
+              <BarChart data={stats.contacts_by_epr_category} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
                 <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
@@ -362,11 +343,11 @@ export default function Dashboard() {
             <span className="w-1.5 h-1.5 rounded-full bg-recykal-bright-green" />
             DRS Inquiries by City
           </h2>
-          {drsContactsByCity.length === 0 ? (
+          {stats.contacts_drs_by_city.length === 0 ? (
             <p className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center">No DRS submissions yet</p>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={drsContactsByCity} layout="vertical" margin={{ left: 20 }}>
+              <BarChart data={stats.contacts_drs_by_city} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
                 <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />

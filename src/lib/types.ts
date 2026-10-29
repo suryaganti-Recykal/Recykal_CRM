@@ -361,6 +361,33 @@ export interface Company {
   country: string | null
   pincode: string | null
   owner_id: string | null
+  vertical: CompanyVertical | null
+}
+
+export type CompanyVertical = 'EPR' | 'Marketplace' | 'Re-commerce' | 'DRS'
+export const COMPANY_VERTICALS: CompanyVertical[] = ['EPR', 'Marketplace', 'Re-commerce', 'DRS']
+
+export type CompanyStatus = 'has_deals' | 'contacts_only' | 'no_contacts_no_deals'
+export const COMPANY_STATUS_LABELS: Record<CompanyStatus, string> = {
+  has_deals: 'Has deals',
+  contacts_only: 'Contacts only',
+  no_contacts_no_deals: 'No contacts or deals',
+}
+
+export interface CompanyOverview {
+  id: number
+  name: string
+  city: string | null
+  state: string | null
+  website: string | null
+  domain: string | null
+  tag: string | null
+  contact_count: number
+  deal_count: number
+  first_contact_at: string | null
+  data_fields_filled: number
+  status: CompanyStatus
+  vertical: CompanyVertical | null
 }
 
 export interface Deal {
