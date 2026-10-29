@@ -23,6 +23,7 @@ const VERTICAL_STYLES: Record<CompanyVertical, string> = {
   Marketplace: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   'Re-commerce': 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
   DRS: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+  Media: 'bg-pink-50 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
 }
 
 const STATUS_STYLES: Record<CompanyStatus, string> = {

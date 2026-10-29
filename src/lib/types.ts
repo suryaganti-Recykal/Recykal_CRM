@@ -364,8 +364,8 @@ export interface Company {
   vertical: CompanyVertical | null
 }
 
-export type CompanyVertical = 'EPR' | 'Marketplace' | 'Re-commerce' | 'DRS'
-export const COMPANY_VERTICALS: CompanyVertical[] = ['EPR', 'Marketplace', 'Re-commerce', 'DRS']
+export type CompanyVertical = 'EPR' | 'Marketplace' | 'Re-commerce' | 'DRS' | 'Media'
+export const COMPANY_VERTICALS: CompanyVertical[] = ['EPR', 'Marketplace', 'Re-commerce', 'DRS', 'Media']
 
 export type CompanyStatus = 'has_deals' | 'contacts_only' | 'no_contacts_no_deals'
 export const COMPANY_STATUS_LABELS: Record<CompanyStatus, string> = {
